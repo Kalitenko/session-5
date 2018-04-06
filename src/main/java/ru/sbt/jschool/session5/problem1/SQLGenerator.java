@@ -2,15 +2,19 @@ package ru.sbt.jschool.session5.problem1;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-
-/**
- */
-
+import java.util.ArrayList;
+import java.util.List;
 
 public class SQLGenerator {
 
-    public static final String space = " ";
-    public static final String commaAndSpace = ", ";
+    private static final String space = " ";
+    private static final String commaSpace = ", ";
+    private static final String questionMark = "?";
+    private static final String questionMarkCommaSpace = "?, ";
+    private static final String equalSignQuestionMarkSpace = " = ?";
+    private static final String equalSignQuestionMarkCommaSpace = " = ?, ";
+    private static final String and = " AND ";
+
 
     public <T> String insert(Class<T> clazz) {
 
@@ -22,37 +26,12 @@ public class SQLGenerator {
 
         // названия столбцов
         StringBuilder columnNames = new StringBuilder();
-        Field[] fields = clazz.getDeclaredFields();
-        int fieldsLength = fields.length;
-        int count = 0;
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(Column.class)){
-                count++;
-                if(!field.getAnnotation(Column.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(Column.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(commaAndSpace);
-                } else {
-                    columnNames.append(field.getName().toLowerCase().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(commaAndSpace);
-                }
-            } else if(field.isAnnotationPresent(PrimaryKey.class)){
-                count++;
-                if(!field.getAnnotation(PrimaryKey.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(commaAndSpace);
-                } else {
-                    columnNames.append(field.getName().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(commaAndSpace);
-                }
-            }
-        }
+        Counter count = new Counter(0);
 
-        sb.append(columnNames).append(") VALUES (").append(repeatString("?, ", count - 1)).append("?)");
+        sb.append(writeFields(clazz, commaSpace, true, true, count, false));
+        sb.append(columnNames).append(") VALUES (")
+                .append(repeatString(questionMarkCommaSpace, count.getCount() - 1))
+                .append(questionMark).append(")");
 
         return sb.toString();
     }
@@ -64,52 +43,20 @@ public class SQLGenerator {
 
         sb.append(writeTableName(clazz)).append(" SET ");
 
-
         // названия столбцов
         StringBuilder columnNames = new StringBuilder();
-        Field[] fields = clazz.getDeclaredFields();
-        int fieldsLength = fields.length;
+        Counter counter = new Counter(0);
 
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(Column.class)){
-                if(!field.getAnnotation(Column.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(Column.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?, ");
-                } else {
-                    columnNames.append(field.getName().toLowerCase().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?, ");
-                }
-            }
-        }
+        columnNames.append(writeFields(clazz, equalSignQuestionMarkCommaSpace, true,
+                false, counter, false));
 
-        sb.append(columnNames).append(" = ?").append(" WHERE ");
+        sb.append(columnNames).append(equalSignQuestionMarkSpace).append(" WHERE ");
         columnNames.setLength(0);
 
-        fieldsLength = fields.length;
-        int count = 0;
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(PrimaryKey.class)){
-                if(fieldsLength > 0 && count > 0)
-                    columnNames.append(" AND ");
-                count++;
-                if(!field.getAnnotation(PrimaryKey.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                } else {
-                    columnNames.append(field.getName().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                }
-            }
-        }
+        columnNames.append(writeFields(clazz, equalSignQuestionMarkSpace, false,
+                true, counter, true));
+
         sb.append(columnNames);
-
-
         return sb.toString();
     }
 
@@ -123,28 +70,12 @@ public class SQLGenerator {
 
         // названия столбцов
         StringBuilder columnNames = new StringBuilder();
-        Field[] fields = clazz.getDeclaredFields();
-        int fieldsLength = fields.length;
-        int count = 0;
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(PrimaryKey.class)){
-                if(fieldsLength > 0 && count > 0)
-                    columnNames.append(" AND ");
-                count++;
-                if(!field.getAnnotation(PrimaryKey.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                } else {
-                    columnNames.append(field.getName().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                }
-            }
-        }
-        sb.append(columnNames);
+        Counter counter = new Counter(0);
 
+        columnNames.append(writeFields(clazz, equalSignQuestionMarkSpace, false,
+                true, counter, true));
+
+        sb.append(columnNames);
         return sb.toString();
     }
 
@@ -155,50 +86,18 @@ public class SQLGenerator {
 
         // названия столбцов
         StringBuilder columnNames = new StringBuilder();
-        Field[] fields = clazz.getDeclaredFields();
-        int fieldsLength = fields.length;
+        Counter counter = new Counter(0);
 
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(Column.class)){
-                if(!field.getAnnotation(Column.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(Column.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(", ");
-                } else {
-                    columnNames.append(field.getName().toLowerCase().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(", ");
-                }
-            }
-        }
+        columnNames.append(writeFields(clazz, commaSpace, true,
+                false, counter, false));
 
         sb.append(columnNames).append(" FROM ").append(writeTableName(clazz)).append(" WHERE ");
         columnNames.setLength(0);
 
-        // названия столбцов
-        fieldsLength = fields.length;
-        int count = 0;
-        for(Field field : fields){
-            fieldsLength--;
-            if(field.isAnnotationPresent(PrimaryKey.class)){
-                if(fieldsLength > 0 && count > 0)
-                    columnNames.append(" AND ");
-                count++;
-                if(!field.getAnnotation(PrimaryKey.class).name().isEmpty()){
-                    columnNames.append(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                } else {
-                    columnNames.append(field.getName().toLowerCase());
-                    if(fieldsLength != 0)
-                        columnNames.append(" = ?");
-                }
-            }
-        }
+        columnNames.append(writeFields(clazz, equalSignQuestionMarkSpace, false,
+                true, counter, true));
+
         sb.append(columnNames);
-
-
         return sb.toString();
     }
 
@@ -219,6 +118,66 @@ public class SQLGenerator {
         for(Annotation x : annotations)
             if(x instanceof Table)
                 sb.append(((Table) x).name());
+
+        return sb.toString();
+    }
+
+    // класс счетчик
+    class Counter{
+        private int count;
+
+        Counter(int count){
+            this.count = count;
+        }
+        public void setCount(int count) {
+            this.count = count;
+        }
+        public int getCount() {
+            return count;
+        }
+    }
+
+    // поля в строку
+    String writeFields(Class clazz, String separator, boolean columnClass, boolean primaryKeyClass,
+                       Counter counter, boolean flag){
+
+        StringBuilder sb = new StringBuilder();
+
+        List<String> columnsNames = new ArrayList<>();
+
+        Field[] fields = clazz.getDeclaredFields();
+        int count = 0;
+        for(Field field : fields){
+            if(columnClass) {
+                if (field.isAnnotationPresent(Column.class)) {
+                    count++;
+                    if (!field.getAnnotation(Column.class).name().isEmpty())
+                        columnsNames.add(field.getAnnotation(Column.class).name().toLowerCase());
+                    else
+                        columnsNames.add(field.getName().toLowerCase().toLowerCase());
+                }
+            }
+            if(primaryKeyClass){
+                if(field.isAnnotationPresent(PrimaryKey.class)){
+                    count++;
+                    if(!field.getAnnotation(PrimaryKey.class).name().isEmpty())
+                        columnsNames.add(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
+                    else
+                        columnsNames.add(field.getName().toLowerCase().toLowerCase());
+                }
+            }
+        }
+
+        counter.setCount(count);
+        if(count > 1 && flag) {
+            for(int i = 0; i < columnsNames.size(); i++){
+                String tmpString = columnsNames.get(i) + separator;
+                columnsNames.set(i, tmpString);
+            }
+            sb.append(String.join(and, columnsNames));
+        }
+        else
+            sb.append(String.join(separator, columnsNames));
 
         return sb.toString();
     }
