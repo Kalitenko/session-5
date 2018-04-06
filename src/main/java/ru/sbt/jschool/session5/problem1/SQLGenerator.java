@@ -102,53 +102,73 @@ public class SQLGenerator {
     }
 
     // повторение строки
-    static private String repeatString(String str, int num){
+    static private String repeatString(String str, int num) {
         StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < num; i++)
+        for (int i = 0; i < num; i++)
             sb.append(str);
 
         return sb.toString();
     }
 
     // название таблицы
-    String writeTableName(Class clazz){
+    String writeTableName(Class clazz) {
 
         StringBuilder sb = new StringBuilder();
         Annotation[] annotations = clazz.getAnnotations();
-        for(Annotation x : annotations)
-            if(x instanceof Table)
+        for (Annotation x : annotations)
+            if (x instanceof Table)
                 sb.append(((Table) x).name());
 
         return sb.toString();
     }
 
     // класс счетчик
-    class Counter{
+    class Counter {
         private int count;
 
-        Counter(int count){
+        Counter(int count) {
             this.count = count;
         }
+
         public void setCount(int count) {
             this.count = count;
         }
+
         public int getCount() {
             return count;
         }
     }
 
     // поля в строку
-    String writeFields(Class clazz, String separator, boolean columnClass, boolean primaryKeyClass,
-                       Counter counter, boolean flag){
+    String writeFields(Class clazz, String separator, boolean iScolumnClass, boolean iSprimaryKeyClass,
+                       Counter counter, boolean flag) {
 
         StringBuilder sb = new StringBuilder();
 
+        List<String> columnsNames = fieldsToStrings(clazz, separator, iScolumnClass, iSprimaryKeyClass, counter);
+
+        //counter.setCount(count);
+        if (counter.getCount() > 1 && flag) {
+            for (int i = 0; i < columnsNames.size(); i++) {
+                String tmpString = columnsNames.get(i) + separator;
+                columnsNames.set(i, tmpString);
+            }
+            sb.append(String.join(and, columnsNames));
+        } else
+            sb.append(String.join(separator, columnsNames));
+
+        return sb.toString();
+    }
+
+    // записываем поля в список строк
+    List<String> fieldsToStrings(Class clazz, String separator, boolean iScolumnClass, boolean iSprimaryKeyClass,
+                                    Counter counter) {
         List<String> columnsNames = new ArrayList<>();
 
         Field[] fields = clazz.getDeclaredFields();
         int count = 0;
-        for(Field field : fields){
-            if(columnClass) {
+        for (Field field : fields) {
+            if (iScolumnClass) {
                 if (field.isAnnotationPresent(Column.class)) {
                     count++;
                     if (!field.getAnnotation(Column.class).name().isEmpty())
@@ -157,29 +177,18 @@ public class SQLGenerator {
                         columnsNames.add(field.getName().toLowerCase().toLowerCase());
                 }
             }
-            if(primaryKeyClass){
-                if(field.isAnnotationPresent(PrimaryKey.class)){
+            if (iSprimaryKeyClass) {
+                if (field.isAnnotationPresent(PrimaryKey.class)) {
                     count++;
-                    if(!field.getAnnotation(PrimaryKey.class).name().isEmpty())
+                    if (!field.getAnnotation(PrimaryKey.class).name().isEmpty())
                         columnsNames.add(field.getAnnotation(PrimaryKey.class).name().toLowerCase());
                     else
                         columnsNames.add(field.getName().toLowerCase().toLowerCase());
                 }
             }
         }
-
         counter.setCount(count);
-        if(count > 1 && flag) {
-            for(int i = 0; i < columnsNames.size(); i++){
-                String tmpString = columnsNames.get(i) + separator;
-                columnsNames.set(i, tmpString);
-            }
-            sb.append(String.join(and, columnsNames));
-        }
-        else
-            sb.append(String.join(separator, columnsNames));
-
-        return sb.toString();
+        return columnsNames;
     }
 
 }
