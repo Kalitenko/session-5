@@ -57,6 +57,7 @@ public class SQLGenerator {
                 true, counter, true));
 
         sb.append(columnNames);
+
         return sb.toString();
     }
 
@@ -76,6 +77,7 @@ public class SQLGenerator {
                 true, counter, true));
 
         sb.append(columnNames);
+
         return sb.toString();
     }
 
@@ -148,7 +150,7 @@ public class SQLGenerator {
         List<String> columnsNames = fieldsToStrings(clazz, separator, iScolumnClass, iSprimaryKeyClass, counter);
 
         //counter.setCount(count);
-        if (counter.getCount() > 1 && flag) {
+        if (counter.getCount() >= 1 && flag) {
             for (int i = 0; i < columnsNames.size(); i++) {
                 String tmpString = columnsNames.get(i) + separator;
                 columnsNames.set(i, tmpString);
