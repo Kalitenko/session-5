@@ -15,7 +15,7 @@ public class ObjectFormatter implements JSONTypeFormatter<Object> {
     @Override
     public String format(Object object, JSONFormatter formatter, Map<String, Object> ctx) {
 
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder("{\n");
 
         Class clazz = object.getClass();
         List<Field> fields = new ArrayList<>();
@@ -49,6 +49,6 @@ public class ObjectFormatter implements JSONTypeFormatter<Object> {
 
         sb.append(indent).append(String.join(delimeter, strList));
 
-        return sb.toString();
+        return sb.append("\n}").toString();
     }
 }
